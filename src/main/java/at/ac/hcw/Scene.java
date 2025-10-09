@@ -8,18 +8,8 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.util.Scanner;
-
 
 public class Scene extends Application {
-    public static void main(String[] args) {
-        launch(args);
-    }
-
-
 
     @Override
     public void start(Stage primaryStage) {
@@ -30,6 +20,7 @@ public class Scene extends Application {
 
             @Override
             public void handle(ActionEvent event) {
+                //For async scanning
                 Thread newThread = new Thread(() -> {
                     ScannerApplication.scanPort("1.1.1.1", 1, 500);
                 });
