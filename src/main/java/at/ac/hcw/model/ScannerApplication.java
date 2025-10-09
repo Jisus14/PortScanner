@@ -13,7 +13,7 @@ public class ScannerApplication {
             socket.connect(address, timeout); //Tries to connect to the given address on a port, will error out when closed or exceed timeout
             return true;
         } catch (IOException e) {
-            System.err.println("Could not connect to : " + port + e.getMessage());
+            System.err.println("Port " + port + ": " + e.getMessage());
             return false;
         }
     }
