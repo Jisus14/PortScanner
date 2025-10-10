@@ -25,7 +25,7 @@ public class ScannerApplication {
             boolean result = pingHost(host, i, timeout);
             //If host responded --> port open --> logged in array
             if(result){
-                results[i] = i;
+                results[i-portStart] = i;
             }
             //System.out.println(i + ":" + result); //Debug
         }
