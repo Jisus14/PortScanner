@@ -21,10 +21,18 @@ public class Scene extends Application {
             @Override
             public void handle(ActionEvent event) {
                 //For async scanning
-                Thread newThread = new Thread(() -> {
-                    ScannerApplication.scanPort("1.1.1.1", 1, 500);
-                });
-                newThread.start();
+                int numOfThreads = 20;
+                String host = "localhost";
+                int portStart = 0;
+                int portEnd = 10000;
+                int timeout = 200;
+                int portsPerThread = ((portEnd - portStart) / numOfThreads) + 1; //Plus 1 maybe of rounding loss
+                Thread[] threads = new Thread[numOfThreads];
+
+                for (int i = 0; i < threads.length; i++) {
+                    threads[i] = new Thread(new ScannerApplication(host,portStart + ((i*portsPerThread)), portStart + ((i+1)*portsPerThread), timeout));
+                    threads[i].start();
+                }
             }
         });
 

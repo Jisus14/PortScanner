@@ -4,7 +4,23 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
-public class ScannerApplication {
+public class ScannerApplication implements Runnable {
+
+    String host;
+    int portStart;
+    int portEnd;
+    int timeout;
+    public ScannerApplication(String host, int portStart, int portEnd, int timeout) {
+        this.host = host;
+        this.portStart = portStart;
+        this.portEnd = portEnd;
+        this.timeout = timeout;
+    }
+
+    public void run() {
+        scanPort(host,portStart,portEnd);
+    }
+
 
     //Pings IP to get response
     public static boolean pingHost(String host, int port, int timeout) {
@@ -17,6 +33,8 @@ public class ScannerApplication {
             return false;
         }
     }
+
+
 
     //Main function for scanning
     public static void scanPort(String host, int portStart, int portEnd, int maxThreads, int[] ignorePort, int timeout) {
