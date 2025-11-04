@@ -45,7 +45,7 @@ public class ScannerApplication implements Runnable {
             return true;
         } catch (IOException e) {
             //Debug
-            //System.err.println("Port " + port + ": " + e.getMessage());
+            System.err.println("Port " + port + ": " + e.getMessage());
             return false;
         }
     }
