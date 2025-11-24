@@ -1,5 +1,7 @@
 package at.ac.hcw.model;
 
+import at.ac.hcw.Scene;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -23,11 +25,14 @@ public class ScannerApplication implements Runnable {
         this.timeout = timeout;
     }
 
-    //Main funtion of Runnable
+    //Main function of Runnable
     public void run() {
         for (int port = portStart; port < portEnd; port++) {
             if (pingHost(host, port, timeout)) {
                 openPorts.add(port);
+            }
+            if(!Scene.running){
+                break;
             }
         }
     }
