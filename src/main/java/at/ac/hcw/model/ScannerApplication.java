@@ -5,6 +5,7 @@ import at.ac.hcw.Scene;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -27,7 +28,8 @@ public class ScannerApplication implements Runnable {
 
     //Main function of Runnable
     public void run() {
-        for (int port = portStart; port < portEnd; port++) {
+        for (int port = portStart; port <= portEnd; port++) {
+            Scene.progressDoneCount.incrementAndGet();
             if (pingHost(host, port, timeout)) {
                 openPorts.add(port);
             }
@@ -48,9 +50,12 @@ public class ScannerApplication implements Runnable {
             InetSocketAddress address = new InetSocketAddress(host, port);
             socket.connect(address, timeout); //Tries to connect to the given address on a port, will error out when closed or exceed timeout
             return true;
+        }catch(SocketTimeoutException e){
+            //System.err.println("Port " + port + ": TIMEOUT " + e.getMessage());
+            return false;
         } catch (IOException e) {
             //Debug
-            System.err.println("Port " + port + ": " + e.getMessage());
+            //System.err.println("Port " + port + ": REFUSE " + e.getMessage());
             return false;
         }
     }

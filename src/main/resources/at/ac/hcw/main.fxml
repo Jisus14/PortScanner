@@ -6,6 +6,7 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.VBox?>
 
+<?import javafx.scene.text.Text?>
 <VBox alignment="CENTER" spacing="10.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="at.ac.hcw.Scene">
     <padding>
         <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
@@ -25,6 +26,8 @@
 
     <Label text="Maximum timeout" />
     <TextField fx:id="maxTimeoutInput" text="200" />
+
+    <Text fx:id="progress" text="Progress" />
 
     <Button fx:id="start_btn" text="Scan port" onAction="#onStartBtnClick" />
     <Button fx:id="stop_btn" disable="true" text="Stop" onAction="#onStopBtnClick" />

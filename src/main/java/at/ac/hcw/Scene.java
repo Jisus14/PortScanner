@@ -8,15 +8,20 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Scene extends Application {
     public static boolean running;
+    public static AtomicInteger progressDoneCount;
+    private static final DecimalFormat df = new DecimalFormat("0.00");
 
     @FXML
     private TextField hostInput;
@@ -32,6 +37,8 @@ public class Scene extends Application {
     private Button start_btn;
     @FXML
     private Button stop_btn;
+    @FXML
+    private Text progress;
 
     private Thread[] threads;
     private ScannerApplication[] scanners;
@@ -104,8 +111,10 @@ public class Scene extends Application {
         String host = hostInput.getText();
         int portStart = Integer.parseInt(portStartInput.getText());
         int portEnd = Integer.parseInt(portEndInput.getText());
+        int portsToScan = portEnd - portStart;
         int numOfThreads = Integer.parseInt(maxThreadsInput.getText());
-        int portsPerThread = ((portEnd - portStart) / numOfThreads) + 1; //Plus 1 maybe of rounding loss
+        progressDoneCount = new AtomicInteger(0);
+        int portsPerThread = (portsToScan / numOfThreads) + 1; //Plus 1 maybe of rounding loss
         int timeout = Integer.parseInt(maxTimeoutInput.getText());
 
 
@@ -139,6 +148,20 @@ public class Scene extends Application {
             threads[i].start();
         }
 
+        //Progress indicator prototype
+        new Thread(() -> {
+            while(running){
+                double progressPercent = ((double) progressDoneCount.getPlain() / (double) portsToScan) * 100;
+                progress.setText(df.format(progressPercent) + "%");
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
+
+
         //New Thread otherwise UI freeze
         new Thread(() -> {
 
@@ -161,6 +184,7 @@ public class Scene extends Application {
             System.out.println(allOpenPorts);
             //Needs this otherwise error if not with runLater because this is in a thread
             Platform.runLater(() -> {
+                progress.setText(df.format(100) + "%");
                 running = false;
                 start_btn.setDisable(false);
                 stop_btn.setDisable(true);
