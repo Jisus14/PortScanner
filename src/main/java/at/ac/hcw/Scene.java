@@ -7,6 +7,8 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
@@ -17,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class Scene extends Application {
     public static boolean running;
@@ -34,11 +37,15 @@ public class Scene extends Application {
     @FXML
     private TextField maxTimeoutInput;
     @FXML
-    private Button start_btn;
+    private Button startBtn;
     @FXML
-    private Button stop_btn;
+    private Button stopBtn;
     @FXML
     private Text progress;
+    @FXML
+    private ProgressBar progressBar;
+    @FXML
+    private TextArea resultTextArea;
 
     private Thread[] threads;
     private ScannerApplication[] scanners;
@@ -58,7 +65,9 @@ public class Scene extends Application {
         Parent root = loader.load();
 
         primaryStage.setTitle("Port Scanner");
-        primaryStage.setScene(new javafx.scene.Scene(root, 500, 400));
+        primaryStage.setScene(new javafx.scene.Scene(root, 650 , 650));
+        primaryStage.setMinWidth(650);
+        primaryStage.setMinHeight(650);
         primaryStage.show();
     }
 
@@ -67,18 +76,19 @@ public class Scene extends Application {
         //Starts a thread to terminate all the threads
         new Thread(() ->{
             running = false; //Disables the running flag so all thread end early
-            for (int i = 0; i < threads.length; i++) {
-                try{
-                    if (threads[i] != null) {
-                        threads[i].interrupt();
-                        threads[i].join(); //Waits until the thread stopped
-                        System.out.println(threads[i] + "stopped"); //Debug
+            for (Thread thread : threads) {
+                try {
+                    if (thread != null) {
+                        thread.interrupt();
+                        thread.join(); //Waits until the thread stopped
+                        System.out.println(thread + "stopped"); //Debug
                     }
-                }catch (InterruptedException e) {
+                } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
         }).start();
+        resultTextArea.appendText("Scanning stopped! Following open ports have been found:\n");
     }
 
     //When button is presses
@@ -91,21 +101,22 @@ public class Scene extends Application {
         char[] maxThreadsCheck = maxThreadsInput.getText().toCharArray();
         char[] maxTimeoutCheck = maxTimeoutInput.getText().toCharArray();
         if(!checkValidity(portStartCheck)){
-            start_btn.setText("Invalid port");
+            startBtn.setText("Invalid from port");
             return;
         }
         if(!checkValidity(portEndCheck)){
-            start_btn.setText("Invalid port");
+            startBtn.setText("Invalid to port");
             return;
         }
         if(!checkValidity(maxThreadsCheck)){
-            start_btn.setText("Invalid threads");
+            startBtn.setText("Invalid threads");
             return;
         }
         if(!checkValidity(maxTimeoutCheck)){
-            start_btn.setText("Invalid timeout");
+            startBtn.setText("Invalid timeout");
             return;
         }
+        resultTextArea.clear();
 
         //Parses all the values to start scan
         String host = hostInput.getText();
@@ -118,13 +129,15 @@ public class Scene extends Application {
         int timeout = Integer.parseInt(maxTimeoutInput.getText());
 
 
-        start_btn.setDisable(true);
-        stop_btn.setDisable(false);
-        start_btn.setText("Scanning...");
+        startBtn.setDisable(true);
+        stopBtn.setDisable(false);
+        startBtn.setText("Scanning...");
         running = true;
 
+        long startTime = System.currentTimeMillis();
 
-        System.out.println("Scanning: " + host);
+
+        resultTextArea.appendText("Scanning: " + host + "\n");
 
         //Splits work into multiple workers.
         //2 Arrays so they are targetable for summerization of open ports
@@ -148,15 +161,20 @@ public class Scene extends Application {
             threads[i].start();
         }
 
-        //Progress indicator prototype
+        //Progressbar
         new Thread(() -> {
-            while(running){
-                double progressPercent = ((double) progressDoneCount.getPlain() / (double) portsToScan) * 100;
-                progress.setText(df.format(progressPercent) + "%");
+            while(running) {
+                double progressDecimal = ((double) progressDoneCount.getPlain() / (double) portsToScan);
+                //Needs this otherwise error if not with runLater because this is in a thread
+                Platform.runLater(() -> {
+                    progressBar.setProgress(progressDecimal);
+                    progress.setText(df.format(progressDecimal * 100) + "%");
+                });
+
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(50); // Updates 20 times per second
                 } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    break;
                 }
             }
         }).start();
@@ -180,15 +198,25 @@ public class Scene extends Application {
             }
             running = false;
             //Sorts and prints the list
+            allOpenPorts = allOpenPorts.stream().distinct().collect(Collectors.toList());
             Collections.sort(allOpenPorts);
-            System.out.println(allOpenPorts);
+
+            long endTime = System.currentTimeMillis();
+            double durationSeconds = (endTime - startTime) / 1000.0;
+
+            System.out.println("Open Ports: " + allOpenPorts);
+            System.out.println("Scan finished in: " + df.format(durationSeconds) + "s");
+
             //Needs this otherwise error if not with runLater because this is in a thread
+            String finalAllOpenPorts = allOpenPorts.toString().substring(1, allOpenPorts.toString().length() - 1); //To remove the brackets
             Platform.runLater(() -> {
+                resultTextArea.appendText(finalAllOpenPorts + "\n");
+                progressBar.setProgress(100);
                 progress.setText(df.format(100) + "%");
                 running = false;
-                start_btn.setDisable(false);
-                stop_btn.setDisable(true);
-                start_btn.setText("Done, do again?");
+                startBtn.setDisable(false);
+                stopBtn.setDisable(true);
+                startBtn.setText("Done, do again?");
             });
         }).start();
     }
