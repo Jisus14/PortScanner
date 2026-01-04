@@ -1,0 +1,21 @@
+.text-field {
+    -fx-background-radius: 4;
+    -fx-border-color: lightgray;
+    -fx-border-radius: 4;
+}
+
+.start-button {
+    -fx-background-color: linear-gradient(to right, lightblue, darkblue);
+    -fx-text-fill: white;
+    -fx-background-radius: 4;
+}
+
+.stop-button {
+    -fx-background-color: linear-gradient(to right, indianred, darkred);
+    -fx-text-fill: white;
+    -fx-background-radius: 4;
+}
+
+.progress-bar .bar {
+    -fx-background-color: linear-gradient(to right, lightblue, darkblue);
+}
