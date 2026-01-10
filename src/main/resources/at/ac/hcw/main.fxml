@@ -16,7 +16,7 @@
 
 
 
-<VBox alignment="CENTER" minHeight="650" minWidth="800" stylesheets="@style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="at.ac.hcw.Scene">
+<VBox alignment="CENTER" minHeight="650" minWidth="800" stylesheets="@style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="at.ac.hcw.PortScannerApp">
 
     <!-- main scene -->
     <VBox alignment="TOP_CENTER" maxWidth="600" spacing="15">

@@ -1,6 +1,6 @@
 package at.ac.hcw.model;
 
-import at.ac.hcw.Scene;
+import at.ac.hcw.PortScannerApp;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -8,6 +8,8 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 
 public class ScannerApplication implements Runnable {
 
@@ -17,23 +19,27 @@ public class ScannerApplication implements Runnable {
     private final int portEnd;
     private final int timeout;
     private final List<Integer> openPorts = new ArrayList<>();
+    private final AtomicInteger progressDoneCount;
+    private final BooleanSupplier runningSupplier;
 
     //const
-    public ScannerApplication(String host, int portStart, int portEnd, int timeout) {
+    public ScannerApplication(String host, int portStart, int portEnd, int timeout, AtomicInteger progressDoneCount, BooleanSupplier runningSupplier) {
         this.host = host;
         this.portStart = portStart;
         this.portEnd = portEnd;
         this.timeout = timeout;
+        this.progressDoneCount = progressDoneCount;
+        this.runningSupplier = runningSupplier;
     }
 
     //Main function of Runnable
     public void run() {
         for (int port = portStart; port <= portEnd; port++) {
-            Scene.progressDoneCount.incrementAndGet();
+            progressDoneCount.incrementAndGet();
             if (pingHost(host, port, timeout)) {
                 openPorts.add(port);
             }
-            if(!Scene.running){
+            if(!runningSupplier.getAsBoolean()){
                 break;
             }
         }

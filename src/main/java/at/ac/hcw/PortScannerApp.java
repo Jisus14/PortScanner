@@ -12,7 +12,6 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -21,9 +20,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-public class Scene extends Application {
-    public static boolean running;
-    public static AtomicInteger progressDoneCount;
+public class PortScannerApp extends Application {
+    private volatile boolean running;
+    private AtomicInteger progressDoneCount;
     private static final DecimalFormat df = new DecimalFormat("0.00");
 
     @FXML
@@ -65,16 +64,14 @@ public class Scene extends Application {
         Parent root = loader.load();
 
         primaryStage.setTitle("Port Scanner");
-        primaryStage.setScene(new javafx.scene.Scene(root, 650 , 650));
-        primaryStage.setMinWidth(650);
-        primaryStage.setMinHeight(650);
+        primaryStage.setScene(new javafx.scene.Scene(root));
         primaryStage.show();
     }
 
     @FXML
     protected void onStopBtnClick() {
         //Starts a thread to terminate all the threads
-        new Thread(() ->{
+        new Thread(() -> {
             running = false; //Disables the running flag so all thread end early
             for (Thread thread : threads) {
                 try {
@@ -88,14 +85,16 @@ public class Scene extends Application {
                 }
             }
         }).start();
-        resultTextArea.appendText("Scanning stopped! Following open ports have been found:\n");
+        Platform.runLater(() -> {
+            resultTextArea.appendText("Scanning stopped! Following open ports have been found:\n");
+        });
     }
 
     //When button is presses
     @FXML
     protected void onStartBtnClick() {
 
-        //Cheks if any of the integer inputs is invalid
+        //Checks if any of the integer inputs is invalid
         char[] portStartCheck = portStartInput.getText().toCharArray();
         char[] portEndCheck = portEndInput.getText().toCharArray();
         char[] maxThreadsCheck = maxThreadsInput.getText().toCharArray();
@@ -122,12 +121,11 @@ public class Scene extends Application {
         String host = hostInput.getText();
         int portStart = Integer.parseInt(portStartInput.getText());
         int portEnd = Integer.parseInt(portEndInput.getText());
-        int portsToScan = portEnd - portStart;
+        int portsToScan = portEnd - portStart + 1;
         int numOfThreads = Integer.parseInt(maxThreadsInput.getText());
         progressDoneCount = new AtomicInteger(0);
         int portsPerThread = (portsToScan / numOfThreads) + 1; //Plus 1 maybe of rounding loss
         int timeout = Integer.parseInt(maxTimeoutInput.getText());
-
 
         startBtn.setDisable(true);
         stopBtn.setDisable(false);
@@ -135,7 +133,6 @@ public class Scene extends Application {
         running = true;
 
         long startTime = System.currentTimeMillis();
-
 
         resultTextArea.appendText("Scanning: " + host + "\n");
 
@@ -156,7 +153,7 @@ public class Scene extends Application {
             if (start < portStart) {
                 start = portStart;
             }
-            scanners[i] = new ScannerApplication(host, start, end, timeout);
+            scanners[i] = new ScannerApplication(host, start, end, timeout, progressDoneCount, ()-> running);
             threads[i] = new Thread(scanners[i]);
             threads[i].start();
         }
@@ -164,7 +161,9 @@ public class Scene extends Application {
         //Progressbar
         new Thread(() -> {
             while(running) {
-                double progressDecimal = ((double) progressDoneCount.getPlain() / (double) portsToScan);
+                double progressDecimal = portsToScan == 0
+                        ? 1.0
+                        : (double) progressDoneCount.get() / portsToScan;
                 //Needs this otherwise error if not with runLater because this is in a thread
                 Platform.runLater(() -> {
                     progressBar.setProgress(progressDecimal);
@@ -211,8 +210,8 @@ public class Scene extends Application {
             String finalAllOpenPorts = allOpenPorts.toString().substring(1, allOpenPorts.toString().length() - 1); //To remove the brackets
             Platform.runLater(() -> {
                 resultTextArea.appendText(finalAllOpenPorts + "\n");
-                progressBar.setProgress(100);
-                progress.setText(df.format(100) + "%");
+                progressBar.setProgress(1.0);
+                progress.setText(df.format(100.0) + "%");
                 running = false;
                 startBtn.setDisable(false);
                 stopBtn.setDisable(true);
