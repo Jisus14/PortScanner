@@ -13,9 +13,15 @@ import javafx.scene.control.TextField;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -49,15 +55,6 @@ public class PortScannerApp extends Application {
     private Thread[] threads;
     private ScannerApplication[] scanners;
 
-    private boolean checkValidity(char[] toCheck){
-        for(int i = 0; i < toCheck.length; i++){
-            if(toCheck[i] < '0' || toCheck[i] > '9'){
-                return false;
-            }
-        }
-        return true;
-    }
-
     @Override
     public void start(Stage primaryStage) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("main.fxml"));
@@ -65,6 +62,8 @@ public class PortScannerApp extends Application {
 
         primaryStage.setTitle("Port Scanner");
         primaryStage.setScene(new javafx.scene.Scene(root));
+        primaryStage.setMinWidth(800);
+        primaryStage.setMinHeight(650);
         primaryStage.show();
     }
 
@@ -93,39 +92,75 @@ public class PortScannerApp extends Application {
     //When button is presses
     @FXML
     protected void onStartBtnClick() {
+        int portStart, portEnd, numOfThreads, timeout;
+        String host = hostInput.getText();
+        progressDoneCount = new AtomicInteger(0);
 
-        //Checks if any of the integer inputs is invalid
-        char[] portStartCheck = portStartInput.getText().toCharArray();
-        char[] portEndCheck = portEndInput.getText().toCharArray();
-        char[] maxThreadsCheck = maxThreadsInput.getText().toCharArray();
-        char[] maxTimeoutCheck = maxTimeoutInput.getText().toCharArray();
-        if(!checkValidity(portStartCheck)){
-            startBtn.setText("Invalid from port");
+        //Checks if any input is invalid
+        //Must be number and 0-65535
+        try {
+            portStart = Integer.parseInt(portStartInput.getText().trim());
+            if (portStart < 0 || portStart > 65535) {
+                startBtn.setText("From port must be 0-65535");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            startBtn.setText("Invalid From port");
             return;
         }
-        if(!checkValidity(portEndCheck)){
-            startBtn.setText("Invalid to port");
+
+        //Must be number and 0-65535
+        try {
+            portEnd = Integer.parseInt(portEndInput.getText().trim());
+            if (portEnd < 0 || portEnd > 65535) {
+                startBtn.setText("To Port must be 0-65535");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            startBtn.setText("Invalid To port");
             return;
         }
-        if(!checkValidity(maxThreadsCheck)){
-            startBtn.setText("Invalid threads");
+
+        //End port is greater that start port
+        if (portStart > portEnd) {
+            startBtn.setText("From port > To port");
             return;
         }
-        if(!checkValidity(maxTimeoutCheck)){
-            startBtn.setText("Invalid timeout");
+
+        //Threads greater than 0 and not too many
+        try {
+            numOfThreads = Integer.parseInt(maxThreadsInput.getText().trim());
+            if (numOfThreads < 1) { // Can't have 0 or negative threads
+                startBtn.setText("Max threads must be > 0");
+                return;
+            }
+
+            if (numOfThreads > 1000) {
+                startBtn.setText("Max 1000 threads allowed");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            startBtn.setText("Invalid max Threads");
             return;
         }
+
+        //Timeout greater than 0
+        try {
+            timeout = Integer.parseInt(maxTimeoutInput.getText().trim());
+            if (timeout < 0) {
+                startBtn.setText("Timeout cannot be negative");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            startBtn.setText("Invalid Timeout");
+            return;
+        }
+
         resultTextArea.clear();
 
-        //Parses all the values to start scan
-        String host = hostInput.getText();
-        int portStart = Integer.parseInt(portStartInput.getText());
-        int portEnd = Integer.parseInt(portEndInput.getText());
+        //Port spread can now be done after validation
         int portsToScan = portEnd - portStart + 1;
-        int numOfThreads = Integer.parseInt(maxThreadsInput.getText());
-        progressDoneCount = new AtomicInteger(0);
         int portsPerThread = (portsToScan / numOfThreads) + 1; //Plus 1 maybe of rounding loss
-        int timeout = Integer.parseInt(maxTimeoutInput.getText());
 
         startBtn.setDisable(true);
         stopBtn.setDisable(false);
@@ -182,6 +217,10 @@ public class PortScannerApp extends Application {
         //New Thread otherwise UI freeze
         new Thread(() -> {
 
+            Path folderPath = Paths.get("results");
+            String fileName = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss'.txt'").format(new Date());
+            Path filePath = folderPath.resolve(fileName);
+
             List<Integer> allOpenPorts = new ArrayList<>();
 
             //Collects all open ports from each scanner to allOpenPorts
@@ -205,9 +244,21 @@ public class PortScannerApp extends Application {
 
             System.out.println("Open Ports: " + allOpenPorts);
             System.out.println("Scan finished in: " + df.format(durationSeconds) + "s");
+            String finalAllOpenPorts = allOpenPorts.toString().substring(1, allOpenPorts.toString().length() - 1); //To remove the brackets
+            String logFileOutput = "The ports that are open between " +
+                                    portStart + " to " +
+                                    portEnd + " at " +
+                                    host + " on " +
+                                    fileName.substring(0,fileName.length() - 4) + " are\n" +
+                                    finalAllOpenPorts;
+
+            try{
+                Files.writeString(filePath, logFileOutput, StandardOpenOption.CREATE);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 
             //Needs this otherwise error if not with runLater because this is in a thread
-            String finalAllOpenPorts = allOpenPorts.toString().substring(1, allOpenPorts.toString().length() - 1); //To remove the brackets
             Platform.runLater(() -> {
                 resultTextArea.appendText(finalAllOpenPorts + "\n");
                 progressBar.setProgress(1.0);
