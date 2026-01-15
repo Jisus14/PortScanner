@@ -218,7 +218,14 @@ public class PortScannerApp extends Application {
         new Thread(() -> {
 
             Path folderPath = Paths.get("results");
-            String fileName = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss'.txt'").format(new Date());
+            //Creates folder if there is none
+            try {
+                Files.createDirectories(folderPath);
+            } catch (IOException e) {
+                System.err.println("Failed to create directory: " + e.getMessage());
+            }
+
+            String fileName = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss'.txt'").format(new Date());
             Path filePath = folderPath.resolve(fileName);
 
             List<Integer> allOpenPorts = new ArrayList<>();
