@@ -121,7 +121,7 @@ public class PortScannerApp extends Application {
             return;
         }
 
-        //End port is greater that start port
+        //Start port is greater than end port
         if (portStart > portEnd) {
             startBtn.setText("From port > To port");
             return;

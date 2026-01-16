@@ -25,7 +25,8 @@
             <Insets bottom="30" left="50" right="50" top="30"/>
         </padding>
 
-        <!-- target input -->
+        <!-- Host input -->
+        <!-- fx:id must match @FXML TextField hostInput in the controller -->
         <VBox alignment="CENTER" maxWidth="235" spacing="8">
             <Label text="Target">
                 <font>
@@ -48,21 +49,25 @@
                 <RowConstraints vgrow="SOMETIMES"/>
             </rowConstraints>
 
+            <!-- From port -->
             <VBox spacing="5">
                 <Label text="From port"/>
                 <TextField fx:id="portStartInput" alignment="CENTER" styleClass="text-field" text="1"/>
             </VBox>
 
+            <!-- To port -->
             <VBox spacing="5" GridPane.columnIndex="1">
                 <Label text="To port"/>
                 <TextField fx:id="portEndInput" alignment="CENTER" styleClass="text-field" text="1024"/>
             </VBox>
 
+            <!-- Timeout (ms) -->
             <VBox spacing="5" GridPane.rowIndex="1">
                 <Label text="Timeout (ms)"/>
                 <TextField fx:id="maxTimeoutInput" alignment="CENTER" styleClass="text-field" text="200"/>
             </VBox>
 
+            <!-- Max Threads -->
             <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
                 <Label text="Max Threads"/>
                 <TextField fx:id="maxThreadsInput" alignment="CENTER" styleClass="text-field" text="20"/>
@@ -70,7 +75,8 @@
 
         </GridPane>
 
-        <!-- buttons -->
+        <!-- Start and Stop buttons -->
+        <!-- startBtn triggers onStartBtnClick(); stopBtn triggers onStopBtnClick() -->
         <HBox alignment="CENTER" spacing="15">
 
             <VBox.margin>
@@ -91,7 +97,8 @@
 
         </HBox>
 
-        <!-- scan progress -->
+        <!-- Progress section: percentage + bar -->
+        <!-- progress is a Text bound from controller, progressBar shows numeric progress [0..1] -->
         <VBox spacing="5" alignment="CENTER">
 
             <Text textAlignment="CENTER" fx:id="progress" text="Ready to scan..."/>
@@ -104,7 +111,7 @@
 
         </VBox>
 
-        <!-- scan results -->
+        <!-- resultTextArea displays "Scanning: <host>" and the list of open ports -->
         <VBox style="-fx-border-color: lightgray; -fx-border-radius: 4;">
 
             <VBox alignment="CENTER" style="-fx-padding: 10;">
@@ -114,6 +121,7 @@
             <TextArea fx:id="resultTextArea" editable="false" prefHeight="100" promptText="Scan results..." wrapText="true"/>
         </VBox>
 
+        <!-- Legal note -->
         <Label text="Only scan systems you are allowed to." textFill="gray"/>
 
     </VBox>
