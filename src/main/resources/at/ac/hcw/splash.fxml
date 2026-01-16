@@ -9,18 +9,18 @@
 <VBox alignment="CENTER" prefHeight="400.0" prefWidth="600.0" spacing="20.0"  stylesheets="@style.css" styleClass="splash-background" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
     <Label text="Port Scanner" textFill="WHITE">
         <font>
-            <Font name="System Bold" size="32.0" />
+            <Font name="System Bold" size="32.0"/>
         </font>
         <effect>
-            <DropShadow color="#00000080" radius="10" offsetY="3"/>
+            <DropShadow color="#00000080" offsetY="3"/>
         </effect>
     </Label>
 
     <Label text="by MOVAS" textFill="#e0e0e0">
         <font>
-            <Font size="14.0" />
+            <Font size="14.0"/>
         </font>
     </Label>
 
-    <ProgressBar prefWidth="300.0" progress="-1.0" styleClass="progress-bar" />
+    <ProgressBar prefWidth="300.0" styleClass="progress-bar"/>
 </VBox>

@@ -97,29 +97,6 @@ public class PortScannerApp extends Application {
         stage.show();
     }
 
-    @FXML
-    protected void onStopBtnClick() {
-        //Starts a thread to terminate all the threads
-        new Thread(() -> {
-            //Disables the running flag so all thread end early
-            cancelOutput = true;
-            running = false;
-            for (Thread thread : threads) {
-                try {
-                    if (thread != null) {
-                        thread.join(); //Waits until the thread stopped
-                        System.out.println(thread + "stopped"); //Debug
-                    }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-        Platform.runLater(() -> {
-            resultTextArea.appendText("Scanning aborted! \n");
-        });
-    }
-
     //When button is presses
     @FXML
     protected void onStartBtnClick() {
@@ -274,7 +251,14 @@ public class PortScannerApp extends Application {
                 }
             }
             running = false;
-            if (cancelOutput) return;
+            if (cancelOutput){
+                Platform.runLater(() -> {
+                    startBtn.setDisable(false);
+                    stopBtn.setDisable(true);
+                    startBtn.setText("Done, do again?");
+                });
+                return;
+            }
 
             //Sorts and prints the list
             allOpenPorts = allOpenPorts.stream().distinct().collect(Collectors.toList());
@@ -313,5 +297,29 @@ public class PortScannerApp extends Application {
                 startBtn.setText("Done, do again?");
             });
         }).start();
+    }
+
+    //Stop button pressed
+    @FXML
+    protected void onStopBtnClick() {
+        //Starts a thread to terminate all the threads
+        new Thread(() -> {
+            //Disables the running flag so all thread end early
+            cancelOutput = true;
+            running = false;
+            for (Thread thread : threads) {
+                try {
+                    if (thread != null) {
+                        thread.join(); //Waits until the thread stopped
+                        System.out.println(thread + "stopped"); //Debug
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        Platform.runLater(() -> {
+            resultTextArea.appendText("Scanning aborted! \n");
+        });
     }
 }
