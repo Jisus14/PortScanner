@@ -17,7 +17,7 @@ val junitVersion = "5.12.1"
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(22)
     }
 }
 
@@ -27,11 +27,11 @@ tasks.withType<JavaCompile> {
 
 application {
     mainModule.set("com.example.scanner")
-    mainClass.set("com.example.scanner.HelloApplication")
+    mainClass.set("at.ac.hcw.Launcher")
 }
 
 javafx {
-    version = "21.0.6"
+    version = "22.0.2"
     modules = listOf("javafx.controls", "javafx.fxml", "javafx.web", "javafx.swing")
 }
 
