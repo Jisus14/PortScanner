@@ -5,9 +5,23 @@
 }
 
 .start-button {
-    -fx-background-color: linear-gradient(to right, lightblue, darkblue);
-    -fx-text-fill: white;
-    -fx-background-radius: 4;
+       -fx-text-fill: white;
+      -fx-background-color: linear-gradient(#6fb1ff, #2e69ff);
+      -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 8, 0, 0, 2);
+}
+
+.start-button:hover{
+     -fx-background-color: linear-gradient(#84bfff, #3a78ff);
+}
+
+.start-button:pressed {
+  -fx-background-color: #2a5ad8;
+}
+.start-button:disabled {
+  -fx-background-color: #a7c2ff;
+  -fx-text-fill: rgba(255,255,255,0.85);
+  -fx-opacity: 1; /* nicht ausgrauen, Farbe bleibt kontrolliert */
+  -fx-effect: none;
 }
 
 .stop-button {
