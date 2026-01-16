@@ -1,6 +1,7 @@
 package at.ac.hcw;
 
 import at.ac.hcw.model.*;
+import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -12,6 +13,8 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +31,7 @@ import java.util.stream.Collectors;
 
 public class PortScannerApp extends Application {
     private volatile boolean running;
+    private boolean cancelOutput;
     private AtomicInteger progressDoneCount;
     private static final DecimalFormat df = new DecimalFormat("0.00");
 
@@ -55,27 +59,54 @@ public class PortScannerApp extends Application {
     private Thread[] threads;
     private ScannerApplication[] scanners;
 
+    //Primary stage is the splash screen with fake loading
     @Override
     public void start(Stage primaryStage) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("splash.fxml"));
+        Parent splashRoot = loader.load();
+
+        primaryStage.setTitle("Loading...");
+        primaryStage.setScene(new javafx.scene.Scene(splashRoot));
+        primaryStage.centerOnScreen();
+        primaryStage.show();
+
+        PauseTransition pause = new PauseTransition(Duration.seconds(3)); //Pause for 3 seconds then changes into main portscanner scene
+
+        pause.setOnFinished(event -> {
+            try {
+                showMainScene(primaryStage);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+        pause.play();
+    }
+
+
+    private void showMainScene(Stage stage) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("main.fxml"));
         Parent root = loader.load();
 
-        primaryStage.setTitle("Port Scanner");
-        primaryStage.setScene(new javafx.scene.Scene(root));
-        primaryStage.setMinWidth(800);
-        primaryStage.setMinHeight(650);
-        primaryStage.show();
+        stage.setTitle("Port Scanner");
+        stage.setScene(new javafx.scene.Scene(root));
+
+        stage.setMinWidth(800);
+        stage.setMinHeight(650);
+
+        stage.show();
     }
 
     @FXML
     protected void onStopBtnClick() {
         //Starts a thread to terminate all the threads
         new Thread(() -> {
-            running = false; //Disables the running flag so all thread end early
+            //Disables the running flag so all thread end early
+            cancelOutput = true;
+            running = false;
             for (Thread thread : threads) {
                 try {
                     if (thread != null) {
-                        thread.interrupt();
                         thread.join(); //Waits until the thread stopped
                         System.out.println(thread + "stopped"); //Debug
                     }
@@ -85,7 +116,7 @@ public class PortScannerApp extends Application {
             }
         }).start();
         Platform.runLater(() -> {
-            resultTextArea.appendText("Scanning stopped! Following open ports have been found:\n");
+            resultTextArea.appendText("Scanning aborted! \n");
         });
     }
 
@@ -166,6 +197,7 @@ public class PortScannerApp extends Application {
         stopBtn.setDisable(false);
         startBtn.setText("Scanning...");
         running = true;
+        cancelOutput = false;
 
         long startTime = System.currentTimeMillis();
 
@@ -225,7 +257,7 @@ public class PortScannerApp extends Application {
                 System.err.println("Failed to create directory: " + e.getMessage());
             }
 
-            String fileName = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss'.txt'").format(new Date());
+            String fileName = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss'.csv'").format(new Date());
             Path filePath = folderPath.resolve(fileName);
 
             List<Integer> allOpenPorts = new ArrayList<>();
@@ -242,6 +274,8 @@ public class PortScannerApp extends Application {
                 }
             }
             running = false;
+            if (cancelOutput) return;
+
             //Sorts and prints the list
             allOpenPorts = allOpenPorts.stream().distinct().collect(Collectors.toList());
             Collections.sort(allOpenPorts);
@@ -252,12 +286,15 @@ public class PortScannerApp extends Application {
             System.out.println("Open Ports: " + allOpenPorts);
             System.out.println("Scan finished in: " + df.format(durationSeconds) + "s");
             String finalAllOpenPorts = allOpenPorts.toString().substring(1, allOpenPorts.toString().length() - 1); //To remove the brackets
-            String logFileOutput = "The ports that are open between " +
-                                    portStart + " to " +
-                                    portEnd + " at " +
-                                    host + " on " +
-                                    fileName.substring(0,fileName.length() - 4) + " are\n" +
-                                    finalAllOpenPorts;
+            String logFileOutput = "Host,Port,Status\n"; // CSV Header
+
+            if (allOpenPorts.isEmpty()) {
+                logFileOutput += host + ", ,No open ports\n";
+            } else {
+                for (Integer port : allOpenPorts) {
+                    logFileOutput += host + "," + port + ",Open\n";
+                }
+            }
 
             try{
                 Files.writeString(filePath, logFileOutput, StandardOpenOption.CREATE);
