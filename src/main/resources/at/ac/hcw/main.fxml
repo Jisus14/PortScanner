@@ -115,7 +115,7 @@
         <VBox style="-fx-border-color: lightgray; -fx-border-radius: 4;">
 
             <VBox alignment="CENTER" style="-fx-padding: 10;">
-                <Label style="-fx-font-weight: bold;" text="Open Ports" textFill="dodgerblue"/>
+                <Label style="-fx-font-weight: bold;" text="Open Ports"/>
             </VBox>
 
             <TextArea fx:id="resultTextArea" editable="false" prefHeight="100" promptText="Scan results..." wrapText="true"/>
