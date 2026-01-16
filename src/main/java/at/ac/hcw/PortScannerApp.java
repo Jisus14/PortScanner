@@ -1,67 +1,84 @@
 package at.ac.hcw;
 
-import at.ac.hcw.model.*;
-import javafx.animation.PauseTransition;
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.control.Button;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.text.Text;
-import javafx.stage.Stage;
-import javafx.util.Duration;
+import at.ac.hcw.model.*; // eigene Klassen (z.B. ScannerApplication)
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
+import javafx.animation.PauseTransition;       // Timer für Splash Screen
+import javafx.application.Application;         // Basisklasse für JavaFX Apps
+import javafx.application.Platform;            // UI Updates aus Threads (runLater)
+import javafx.fxml.FXML;                       // Verbindung FXML -> Controller
+import javafx.fxml.FXMLLoader;                 // Lädt FXML Dateien
+import javafx.scene.Parent;                    // Root Node einer Scene
+import javafx.scene.control.Button;            // Button UI Element
+import javafx.scene.control.ProgressBar;       // Fortschrittsbalken
+import javafx.scene.control.TextArea;          // Textausgabe (mehrzeilig)
+import javafx.scene.control.TextField;         // Eingabefelder
+import javafx.scene.text.Text;                 // UI Textanzeige
+import javafx.stage.Stage;                     // Fenster
+import javafx.util.Duration;                   // Zeitangabe (z.B. 3 Sekunden)
 
+import java.io.IOException;                    // Exception bei IO
+import java.nio.file.Files;                    // Ordner/Datei Aktionen
+import java.nio.file.Path;                     // Dateipfad Objekt
+import java.nio.file.Paths;                    // Erzeugt Path aus String
+import java.nio.file.StandardOpenOption;       // Datei-Schreiboptionen
+
+import java.text.DecimalFormat;                // Format für Prozent / Zeit
+import java.text.SimpleDateFormat;             // Dateiname mit Datum
+import java.util.ArrayList;                    // Liste für Ports
+import java.util.Collections;                  // Sortieren
+import java.util.Date;                         // aktuelles Datum/Zeit
+import java.util.List;                         // Interface für Listen
+
+import java.util.concurrent.atomic.AtomicInteger; // thread-sicherer Counter
+import java.util.stream.Collectors;            // Stream/Collect für distinct()
+
+/**
+ * Haupt-JavaFX Anwendung.
+ * - zeigt Splash Screen
+ * - zeigt Main GUI
+ * - startet Multi-Thread Port Scan
+ * - schreibt Ergebnis als CSV
+ */
 public class PortScannerApp extends Application {
+
+    // volatile => Änderungen (true/false) werden sofort in Threads sichtbar
     private volatile boolean running;
+
+    // Wenn true => Scan wurde abgebrochen, Ergebnis wird nicht mehr geschrieben/ausgegeben
     private boolean cancelOutput;
+
+    // Thread-sicherer Fortschrittszähler (alle Worker erhöhen ihn)
     private AtomicInteger progressDoneCount;
+
+    // Formatierung für Prozentanzeige
     private static final DecimalFormat df = new DecimalFormat("0.00");
 
-    @FXML
-    private TextField hostInput;
-    @FXML
-    private TextField portStartInput;
-    @FXML
-    private TextField portEndInput;
-    @FXML
-    private TextField maxThreadsInput;
-    @FXML
-    private TextField maxTimeoutInput;
-    @FXML
-    private Button startBtn;
-    @FXML
-    private Button stopBtn;
-    @FXML
-    private Text progress;
-    @FXML
-    private ProgressBar progressBar;
-    @FXML
-    private TextArea resultTextArea;
+    // ===== GUI Elemente aus main.fxml =====
+    @FXML private TextField hostInput;
+    @FXML private TextField portStartInput;
+    @FXML private TextField portEndInput;
+    @FXML private TextField maxThreadsInput;
+    @FXML private TextField maxTimeoutInput;
 
+    @FXML private Button startBtn;
+    @FXML private Button stopBtn;
+
+    @FXML private Text progress;
+    @FXML private ProgressBar progressBar;
+    @FXML private TextArea resultTextArea;
+
+    // Threads und Scanner in Arrays, damit man Ergebnisse später sammeln kann
     private Thread[] threads;
     private ScannerApplication[] scanners;
 
-    //Primary stage is the splash screen with fake loading
+    /**
+     * JavaFX Start-Methode.
+     * Zeigt zuerst splash.fxml und wechselt nach 3 Sekunden auf main.fxml.
+     */
     @Override
     public void start(Stage primaryStage) throws IOException {
+
+        // Splash FXML laden
         FXMLLoader loader = new FXMLLoader(getClass().getResource("splash.fxml"));
         Parent splashRoot = loader.load();
 
@@ -70,8 +87,10 @@ public class PortScannerApp extends Application {
         primaryStage.centerOnScreen();
         primaryStage.show();
 
-        PauseTransition pause = new PauseTransition(Duration.seconds(3)); //Pause for 3 seconds then changes into main portscanner scene
+        // PauseTransition = Timer (3 Sekunden warten)
+        PauseTransition pause = new PauseTransition(Duration.seconds(3));
 
+        // Nach Ablauf: Hauptfenster zeigen
         pause.setOnFinished(event -> {
             try {
                 showMainScene(primaryStage);
@@ -83,7 +102,9 @@ public class PortScannerApp extends Application {
         pause.play();
     }
 
-
+    /**
+     * Lädt main.fxml und zeigt das Hauptfenster.
+     */
     private void showMainScene(Stage stage) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("main.fxml"));
         Parent root = loader.load();
@@ -97,15 +118,21 @@ public class PortScannerApp extends Application {
         stage.show();
     }
 
-    //When button is presses
+    /**
+     * Start Button: validiert Eingaben, startet Threads und Scan-Logik.
+     */
     @FXML
     protected void onStartBtnClick() {
+
         int portStart, portEnd, numOfThreads, timeout;
+
+        // Host lesen
         String host = hostInput.getText();
+
+        // Fortschritt neu starten
         progressDoneCount = new AtomicInteger(0);
 
-        //Checks if any input is invalid
-        //Must be number and 0-65535
+        // ===== Validierung: Start Port =====
         try {
             portStart = Integer.parseInt(portStartInput.getText().trim());
             if (portStart < 0 || portStart > 65535) {
@@ -117,7 +144,7 @@ public class PortScannerApp extends Application {
             return;
         }
 
-        //Must be number and 0-65535
+        // ===== Validierung: End Port =====
         try {
             portEnd = Integer.parseInt(portEndInput.getText().trim());
             if (portEnd < 0 || portEnd > 65535) {
@@ -129,20 +156,22 @@ public class PortScannerApp extends Application {
             return;
         }
 
-        //Start port is greater than end port
+        // Start darf nicht größer als End sein
         if (portStart > portEnd) {
             startBtn.setText("From port > To port");
             return;
         }
 
-        //Threads greater than 0 and not too many
+        // ===== Validierung: Threads =====
         try {
             numOfThreads = Integer.parseInt(maxThreadsInput.getText().trim());
-            if (numOfThreads < 1) { // Can't have 0 or negative threads
+
+            if (numOfThreads < 1) {
                 startBtn.setText("Max threads must be > 0");
                 return;
             }
 
+            // Sicherheitslimit, damit das Programm nicht “explodiert”
             if (numOfThreads > 1000) {
                 startBtn.setText("Max 1000 threads allowed");
                 return;
@@ -152,7 +181,7 @@ public class PortScannerApp extends Application {
             return;
         }
 
-        //Timeout greater than 0
+        // ===== Validierung: Timeout =====
         try {
             timeout = Integer.parseInt(maxTimeoutInput.getText().trim());
             if (timeout < 0) {
@@ -166,13 +195,17 @@ public class PortScannerApp extends Application {
 
         resultTextArea.clear();
 
-        //Port spread can now be done after validation
+        // ===== Port Bereich auf Threads aufteilen =====
         int portsToScan = portEnd - portStart + 1;
-        int portsPerThread = (portsToScan / numOfThreads) + 1; //Plus 1 maybe of rounding loss
 
+        // +1, um Rundungsfehler bei Integer-Division abzufangen
+        int portsPerThread = (portsToScan / numOfThreads) + 1;
+
+        // Buttons sperren/aktivieren
         startBtn.setDisable(true);
         stopBtn.setDisable(false);
         startBtn.setText("Scanning...");
+
         running = true;
         cancelOutput = false;
 
@@ -180,78 +213,88 @@ public class PortScannerApp extends Application {
 
         resultTextArea.appendText("Scanning: " + host + "\n");
 
-        //Splits work into multiple workers.
-        //2 Arrays so they are targetable for summerization of open ports
+        // Arrays für Threads und Scanner erstellen
         threads = new Thread[numOfThreads];
         scanners = new ScannerApplication[numOfThreads];
 
-        //Starts loop and gives every worker a set of ports depending on how many threads etc.
+        // ===== Threads starten =====
         for (int i = 0; i < threads.length; i++) {
-            int start = portStart + ((i * portsPerThread));
+
+            // Bereich berechnen
+            int start = portStart + (i * portsPerThread);
             int end = start + portsPerThread;
 
-            //Makes sure no false ports are scanned
-            if (end > portEnd) {
-                end = portEnd;
-            }
-            if (start < portStart) {
-                start = portStart;
-            }
-            scanners[i] = new ScannerApplication(host, start, end, timeout, progressDoneCount, ()-> running);
+            // Grenzen korrigieren
+            if (end > portEnd) end = portEnd;
+            if (start < portStart) start = portStart;
+
+            // ScannerWorker erstellen: bekommt runningSupplier, damit Stop funktioniert
+            scanners[i] = new ScannerApplication(host, start, end, timeout, progressDoneCount, () -> running);
+
+            // Thread starten
             threads[i] = new Thread(scanners[i]);
             threads[i].start();
         }
 
-        //Progressbar
+        // ===== Progress Thread =====
         new Thread(() -> {
-            while(running) {
+            while (running) {
+
+                // Fortschritt als 0..1 Wert
                 double progressDecimal = portsToScan == 0
                         ? 1.0
                         : (double) progressDoneCount.get() / portsToScan;
-                //Needs this otherwise error if not with runLater because this is in a thread
+
+                // UI Updates müssen im JavaFX Thread laufen
                 Platform.runLater(() -> {
                     progressBar.setProgress(progressDecimal);
                     progress.setText(df.format(progressDecimal * 100) + "%");
                 });
 
                 try {
-                    Thread.sleep(50); // Updates 20 times per second
+                    Thread.sleep(50); // ~20 Updates pro Sekunde
                 } catch (InterruptedException e) {
                     break;
                 }
             }
         }).start();
 
-
-        //New Thread otherwise UI freeze
+        // ===== Ergebnis Sammeln / CSV schreiben =====
         new Thread(() -> {
 
+            // results Ordner
             Path folderPath = Paths.get("results");
-            //Creates folder if there is none
+
+            // Ordner erstellen (falls nicht vorhanden)
             try {
                 Files.createDirectories(folderPath);
             } catch (IOException e) {
                 System.err.println("Failed to create directory: " + e.getMessage());
             }
 
+            // Dateiname mit Timestamp
             String fileName = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss'.csv'").format(new Date());
             Path filePath = folderPath.resolve(fileName);
 
+            // Hier sammeln wir alle offenen Ports
             List<Integer> allOpenPorts = new ArrayList<>();
 
-            //Collects all open ports from each scanner to allOpenPorts
+            // Auf alle Threads warten und Ports sammeln
             for (int i = 0; i < threads.length; i++) {
                 try {
                     if (threads[i] != null) {
-                        threads[i].join();
+                        threads[i].join(); // wartet bis fertig
                         allOpenPorts.addAll(scanners[i].getOpenPorts());
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
+
             running = false;
-            if (cancelOutput){
+
+            // Wenn abgebrochen: kein Output, nur UI reset
+            if (cancelOutput) {
                 Platform.runLater(() -> {
                     startBtn.setDisable(false);
                     stopBtn.setDisable(true);
@@ -260,17 +303,20 @@ public class PortScannerApp extends Application {
                 return;
             }
 
-            //Sorts and prints the list
+            // Duplikate entfernen + sortieren
             allOpenPorts = allOpenPorts.stream().distinct().collect(Collectors.toList());
             Collections.sort(allOpenPorts);
 
+            // Dauer berechnen
             long endTime = System.currentTimeMillis();
             double durationSeconds = (endTime - startTime) / 1000.0;
 
-            System.out.println("Open Ports: " + allOpenPorts);
-            System.out.println("Scan finished in: " + df.format(durationSeconds) + "s");
-            String finalAllOpenPorts = allOpenPorts.toString().substring(1, allOpenPorts.toString().length() - 1); //To remove the brackets
-            String logFileOutput = "Host,Port,Status\n"; // CSV Header
+            // Ports als String (ohne [ ])
+            String finalAllOpenPorts = allOpenPorts.toString()
+                    .substring(1, allOpenPorts.toString().length() - 1);
+
+            // CSV Inhalt erstellen
+            String logFileOutput = "Host,Port,Status\n";
 
             if (allOpenPorts.isEmpty()) {
                 logFileOutput += host + ", ,No open ports\n";
@@ -280,46 +326,51 @@ public class PortScannerApp extends Application {
                 }
             }
 
-            try{
+            // CSV Datei schreiben
+            try {
                 Files.writeString(filePath, logFileOutput, StandardOpenOption.CREATE);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
-            //Needs this otherwise error if not with runLater because this is in a thread
+            // GUI Update nach Ende (JavaFX Thread!)
             Platform.runLater(() -> {
                 resultTextArea.appendText(finalAllOpenPorts + "\n");
                 progressBar.setProgress(1.0);
                 progress.setText(df.format(100.0) + "%");
-                running = false;
                 startBtn.setDisable(false);
                 stopBtn.setDisable(true);
                 startBtn.setText("Done, do again?");
             });
+
         }).start();
     }
 
-    //Stop button pressed
+    /**
+     * Stop Button: setzt running=false, damit Worker abbrechen.
+     * cancelOutput=true verhindert, dass am Ende noch Ergebnisse ausgegeben werden.
+     */
     @FXML
     protected void onStopBtnClick() {
-        //Starts a thread to terminate all the threads
+
         new Thread(() -> {
-            //Disables the running flag so all thread end early
             cancelOutput = true;
             running = false;
+
+            // auf alle Threads warten, damit alles sauber endet
             for (Thread thread : threads) {
                 try {
                     if (thread != null) {
-                        thread.join(); //Waits until the thread stopped
-                        System.out.println(thread + "stopped"); //Debug
+                        thread.join();
+                        System.out.println(thread + " stopped");
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
         }).start();
-        Platform.runLater(() -> {
-            resultTextArea.appendText("Scanning aborted! \n");
-        });
+
+        // UI Meldung
+        Platform.runLater(() -> resultTextArea.appendText("Scanning aborted! \n"));
     }
 }
