@@ -1,3 +1,11 @@
+.splash-background {
+    -fx-background-color: linear-gradient(to bottom right, #6fb1ff, #2e69ff);
+}
+
+.main-background {
+    -fx-background-color: beige;
+}
+
 .text-field {
     -fx-background-radius: 4;
     -fx-border-color: lightgray;
@@ -31,5 +39,5 @@
 }
 
 .progress-bar .bar {
-    -fx-background-color: linear-gradient(to right, lightblue, darkblue);
+    -fx-background-color: linear-gradient(to right, #6fb1ff, #2e69ff);
 }
