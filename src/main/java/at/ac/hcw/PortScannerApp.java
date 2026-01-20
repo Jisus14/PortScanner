@@ -42,7 +42,7 @@ import java.util.stream.Collectors;            // Stream/Collect für distinct()
 public class PortScannerApp extends Application {
 
     // volatile => Änderungen (true/false) werden sofort in Threads sichtbar
-    private volatile boolean running;
+    private volatile boolean running; //Sorgt dafür, dass alle Threads immer den aktuellsten Wert sehen.
 
     // Wenn true => Scan wurde abgebrochen, Ergebnis wird nicht mehr geschrieben/ausgegeben
     private boolean cancelOutput;
@@ -51,7 +51,7 @@ public class PortScannerApp extends Application {
     private AtomicInteger progressDoneCount;
 
     // Formatierung für Prozentanzeige
-    private static final DecimalFormat df = new DecimalFormat("0.00");
+    private static final DecimalFormat df = new DecimalFormat("0.00");//erstellt ein Formatierungs-Objekt, mit dem du Zahlen immer mit 2 Nachkommastellen als String ausgeben kannst
 
     // ===== GUI Elemente aus main.fxml =====
     @FXML private TextField hostInput;
@@ -134,7 +134,7 @@ public class PortScannerApp extends Application {
 
         // ===== Validierung: Start Port =====
         try {
-            portStart = Integer.parseInt(portStartInput.getText().trim());
+            portStart = Integer.parseInt(portStartInput.getText().trim()); //liest eine Zahl aus einem Textfeld und speichert sie als int in der Variable portStart
             if (portStart < 0 || portStart > 65535) {
                 startBtn.setText("From port must be 0-65535");
                 return;
@@ -202,8 +202,8 @@ public class PortScannerApp extends Application {
         int portsPerThread = (portsToScan / numOfThreads) + 1;
 
         // Buttons sperren/aktivieren
-        startBtn.setDisable(true);
-        stopBtn.setDisable(false);
+        startBtn.setDisable(true);//port darf nicht mehr geklickt werden wenn der button schon einmal geklickt wurde
+        stopBtn.setDisable(false); //stop button ist klickbar - kannst stoppen
         startBtn.setText("Scanning...");
 
         running = true;
@@ -215,7 +215,7 @@ public class PortScannerApp extends Application {
 
         // Arrays für Threads und Scanner erstellen
         threads = new Thread[numOfThreads];
-        scanners = new ScannerApplication[numOfThreads];
+        scanners = new ScannerApplication[numOfThreads]; // füllt das array mit so viel objekte der klasse scannerapplication as number of threads
 
         // ===== Threads starten =====
         for (int i = 0; i < threads.length; i++) {
@@ -229,35 +229,45 @@ public class PortScannerApp extends Application {
             if (start < portStart) start = portStart;
 
             // ScannerWorker erstellen: bekommt runningSupplier, damit Stop funktioniert
-            scanners[i] = new ScannerApplication(host, start, end, timeout, progressDoneCount, () -> running);
+            scanners[i] = new ScannerApplication(host, start, end, timeout, progressDoneCount, () -> running); //verweist auf dem konstruktor von scanner application
 
             // Thread starten
             threads[i] = new Thread(scanners[i]);
-            threads[i].start();
+            threads[i].start(); // startet ein thread aus dem array
         }
 
-        // ===== Progress Thread =====
-        new Thread(() -> {
+        // ===== Progress Thread ===== Das ist ein streaming und dann wird eine interne funktion angerufen
+        new Thread(() -> { // Mit Lambda-Ausdruck new Thread(...) erstellt einen neuen Thread (Nebenläufigkeit).
+            //() -> { ... } ist eine Lambda (Runnable-Code).
             while (running) {
+
 
                 // Fortschritt als 0..1 Wert
                 double progressDecimal = portsToScan == 0
                         ? 1.0
-                        : (double) progressDoneCount.get() / portsToScan;
+                        : (double) progressDoneCount.get() / portsToScan; //wie viele Ports schon “fertig” sind (thread-sicher, AtomicInteger)
 
-                // UI Updates müssen im JavaFX Thread laufen
+                // UI Updates müssen im JavaFX Thread laufen; UI darf nur im JavaFX Application Thread geändert werden.
                 Platform.runLater(() -> {
                     progressBar.setProgress(progressDecimal);
                     progress.setText(df.format(progressDecimal * 100) + "%");
                 });
-
+                //Der Thread wartet 50 ms → das sind ca. 20 Updates pro Sekunde (1000ms / 50ms = 20).
+                //
+                //Warum das wichtig ist:
+                //
+                //Ohne sleep würde die Schleife extrem schnell laufen und unnötig CPU verbrauchen.
+                //
+                //20 fps reicht für eine flüssige ProgressBar.
                 try {
                     Thread.sleep(50); // ~20 Updates pro Sekunde
                 } catch (InterruptedException e) {
                     break;
                 }
+
             }
-        }).start();
+        }).start(); //.start() startet den Thread wirklich.
+        //(Wichtig: start() ≠ run(). start() führt den Code parallel aus.)
 
         // ===== Ergebnis Sammeln / CSV schreiben =====
         new Thread(() -> {

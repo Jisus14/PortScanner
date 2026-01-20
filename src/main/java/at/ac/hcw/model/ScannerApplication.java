@@ -11,17 +11,18 @@ import java.util.function.BooleanSupplier;
 
 /**
  * ScannerApplication ist ein "Worker", der einen Portbereich scannt.
- *
  * - Implementiert Runnable, damit man ihn in einem Thread ausführen kann.
  * - Scannt Ports von portStart bis portEnd und sammelt offene Ports.
  * - Aktualisiert einen Fortschrittszähler (AtomicInteger).
  * - Kann über runningSupplier jederzeit "abgebrochen" werden.
  */
-public class ScannerApplication implements Runnable {
+public class ScannerApplication implements Runnable {//Runnable ist interface  dass von java zur verfügung gestellt wird.
+    // Interface in Java ist eine reine Schnittstelle
+    // Vertrag, die festlegt WAS eine Klasse können muss – aber nicht WIE es umgesetzt wird
 
     // ======= Felder / Instanzvariablen =======
 
-    // Zielhost (IP oder Domain), z.B. "192.168.0.1" oder "google.com"
+    // Zielhost (IP oder Domain), z.B. Localhost , "192.168.0.1" oder "google.com"
     private final String host;
 
     // Startport (inklusive)
@@ -35,14 +36,24 @@ public class ScannerApplication implements Runnable {
 
     // Liste der offenen Ports, die gefunden wurden
     // (wird während des Scans befüllt)
-    private final List<Integer> openPorts = new ArrayList<>();
+    private final List<Integer> openPorts = new ArrayList<>(); //speicherplatz reserviert für die offene ports
 
-    // Gemeinsamer Fortschrittszähler (thread-sicher), z.B. für ProgressBar
     // AtomicInteger wird verwendet, weil mehrere Threads gleichzeitig erhöhen können.
-    private final AtomicInteger progressDoneCount;
-
+    private final AtomicInteger progressDoneCount; //Ein AtomicInteger ist eine thread-sichere Ganzzahl, die speziell dafür gedacht ist, gleichzeitig von mehreren Threads gelesen und verändert zu werden
+   //Das ist nicht thread-sicher, weil es intern aus 3 Schritten besteht:
+    //
+    //Wert lesen
+    //
+    //+1 rechnen
+    //
+    //Wert zurückschreiben
+    //
+    //➡️ Zwei Threads können sich dabei gegenseitig überschreiben → falsches Ergebnis
+    // Gemeinsamer Fortschrittszähler (thread-sicher), z.B. für ProgressBar
     // BooleanSupplier liefert true/false, ob der Scan weiterlaufen soll.
     // Vorteil: ScannerApplication muss nicht wissen, WO die "running"-Variable liegt.
+
+
     private final BooleanSupplier runningSupplier;
 
     /**
@@ -55,7 +66,7 @@ public class ScannerApplication implements Runnable {
      * @param progressDoneCount gemeinsamer Zähler für erledigte Ports
      * @param runningSupplier liefert, ob weiter gescannt werden soll (Abbruch möglich)
      */
-    public ScannerApplication(
+    public ScannerApplication(//constructor
             String host,
             int portStart,
             int portEnd,
@@ -75,7 +86,7 @@ public class ScannerApplication implements Runnable {
      * run() ist die "Hauptfunktion" von Runnable.
      * Sie wird aufgerufen, wenn du z.B. new Thread(scanner).start() machst.
      */
-    @Override
+    @Override //Diese Methode soll die geerbte Methode überschreiben (override) – also aus der Superklasse oder aus einem Interface stammen
     public void run() {
 
         // Schleife über den gesamten Portbereich
@@ -121,7 +132,7 @@ public class ScannerApplication implements Runnable {
 
         // try-with-resources:
         // Der Socket wird am Ende automatisch geschlossen (auch bei Exception).
-        try (Socket socket = new Socket()) {
+        try (Socket socket = new Socket()) {// Code, der einen Fehler werfen kann
 
             // Adresse: (host, port)
             InetSocketAddress address = new InetSocketAddress(host, port);
@@ -134,12 +145,12 @@ public class ScannerApplication implements Runnable {
             // Wenn wir hier ankommen, war connect erfolgreich -> Port vermutlich offen
             return true;
 
-        } catch (SocketTimeoutException e) {
+        } catch (SocketTimeoutException e) { // Was passieren soll, wenn dieser Fehler auftritt
             // Timeout: Ziel hat nicht rechtzeitig geantwortet
             // -> für Portscan meistens als "nicht offen / nicht erreichbar" behandeln
             return false;
 
-        } catch (IOException e) {
+        } catch (IOException e) { //e = die konkrete Instanz dieses Fehlers (das Objekt)
             // Alle anderen I/O-Probleme (z.B. Connection refused, Host unreachable, etc.)
             // -> ebenfalls als "nicht offen" behandeln
             return false;
