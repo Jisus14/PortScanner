@@ -28,7 +28,7 @@
         <!-- Host input -->
         <!-- fx:id must match @FXML TextField hostInput in the controller -->
         <VBox alignment="CENTER" maxWidth="235" spacing="8">
-            <Label text="Target">
+            <Label text="Target" styleClass="field-label">
                 <font>
                     <Font size="16.0"/>
                 </font>
@@ -51,25 +51,25 @@
 
             <!-- From port -->
             <VBox spacing="5">
-                <Label text="From port"/>
+                <Label text="From port" styleClass="field-label"/>
                 <TextField fx:id="portStartInput" alignment="CENTER" styleClass="text-field" text="1"/>
             </VBox>
 
             <!-- To port -->
             <VBox spacing="5" GridPane.columnIndex="1">
-                <Label text="To port"/>
+                <Label text="To port" styleClass="field-label"/>
                 <TextField fx:id="portEndInput" alignment="CENTER" styleClass="text-field" text="1024"/>
             </VBox>
 
             <!-- Timeout (ms) -->
             <VBox spacing="5" GridPane.rowIndex="1">
-                <Label text="Timeout (ms)"/>
+                <Label text="Timeout (ms)" styleClass="field-label"/>
                 <TextField fx:id="maxTimeoutInput" alignment="CENTER" styleClass="text-field" text="200"/>
             </VBox>
 
             <!-- Max Threads -->
             <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
-                <Label text="Max Threads"/>
+                <Label text="Max Threads" styleClass="field-label"/>
                 <TextField fx:id="maxThreadsInput" alignment="CENTER" styleClass="text-field" text="20"/>
             </VBox>
 
@@ -115,14 +115,14 @@
         <VBox style="-fx-border-color: lightgray; -fx-border-radius: 4;">
 
             <VBox alignment="CENTER" style="-fx-padding: 10;">
-                <Label style="-fx-font-weight: bold;" text="Open Ports"/>
+                <Label style="-fx-font-weight: bold;" text="Open Ports" styleClass="field-label"/>
             </VBox>
 
             <TextArea fx:id="resultTextArea" editable="false" prefHeight="100" promptText="Scan results..." wrapText="true"/>
         </VBox>
 
         <!-- Legal note -->
-        <Label text="Only scan systems you are allowed to." textFill="gray"/>
+        <Label text="Only scan systems you are allowed to." textFill="dimgray"/>
 
     </VBox>
 </VBox>
